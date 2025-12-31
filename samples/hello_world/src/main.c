@@ -5,10 +5,18 @@
  */
 
 #include <stdio.h>
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(main);
+
+#define MAIN_BSACIC_COUNT 1000
+int endc = 0;
 
 int main(void)
 {
-	printf("Hello World! %s\n", CONFIG_BOARD_TARGET);
+	LOG_INF("Hello World!.s (main.s=%d) %s", endc++, CONFIG_BOARD_TARGET);
+	LOG_INF("Hello World!.s (main.s=%d) %s", endc++, CONFIG_BOARD_TARGET); //printf
+	printk("Hello World! %s\n\n", CONFIG_BOARD_TARGET);
 
 	return 0;
 }
