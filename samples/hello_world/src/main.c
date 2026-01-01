@@ -16,7 +16,9 @@ int main(void)
 {
 	LOG_INF("Hello World!.s (main.s=%d) %s", endc++, CONFIG_BOARD_TARGET);
 	LOG_INF("Hello World!.s (main.s=%d) %s", endc++, CONFIG_BOARD_TARGET); //printf
-	printk("Hello World! %s\n\n", CONFIG_BOARD_TARGET);
+	printk("Hello World! %s\n", CONFIG_BOARD_TARGET);
+	printk("Hello World! %s\n", "home");
+	printk("Hello World! %s\n\n", "use zephyr-sdk-0.17.0/");
 
 	return 0;
 }
