@@ -29,7 +29,7 @@
 			
 			/*int-gpios = <&gpio0 25 GPIO_ACTIVE_LOW>;*/
 			/*int-gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;*/
-			local-mac-address = [00 00 00 01 02 03];
+			local-mac-address = [00 00 00 00 00 00];
 		};
 	};
 };
