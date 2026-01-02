@@ -245,20 +245,35 @@ static void dm9051_write_reg(const struct device *dev, uint8_t reg, uint8_t val)
 static void dm9051_read_mem(const struct device *dev, uint8_t *buf, uint16_t len)
 {
 	const struct dm9051_config *config = dev->config;
-	uint8_t cmd = DM9051_MRCMD | OPC_REG_R;
+	/* On some SPI bitbang implementations, long transfers may keep interrupts
+	 * disabled for too long, impacting UART/shell responsiveness. Read in small
+	 * chunks to bound that effect.
+	 */
+	const uint16_t max_chunk = 64;
+	uint16_t remaining = len;
+	uint16_t offset = 0;
 
-	const struct spi_buf tx_buf = {.buf = &cmd, .len = 1};
-	const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
+	while (remaining > 0) {
+		uint8_t cmd = DM9051_MRCMD | OPC_REG_R;
+		uint16_t chunk = MIN(remaining, max_chunk);
 
-	const struct spi_buf rx_buf[2] = {
-		{.buf = NULL, .len = 1}, /* Discard command echo */
-		{.buf = buf, .len = len} /* Actual data */
-	};
-	const struct spi_buf_set rx = {.buffers = rx_buf, .count = 2};
+		const struct spi_buf tx_buf = {.buf = &cmd, .len = 1};
+		const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
 
-	int ret = spi_transceive_dt(&config->spi, &tx, &rx);
-	if (ret < 0) {
-		LOG_ERR("SPI read memory failed: %d", ret);
+		const struct spi_buf rx_buf[2] = {
+			{.buf = NULL, .len = 1},              /* Discard command echo */
+			{.buf = buf + offset, .len = chunk},  /* Actual data */
+		};
+		const struct spi_buf_set rx = {.buffers = rx_buf, .count = 2};
+
+		int ret = spi_transceive_dt(&config->spi, &tx, &rx);
+		if (ret < 0) {
+			LOG_ERR("SPI read memory failed: %d", ret);
+			return;
+		}
+
+		offset += chunk;
+		remaining -= chunk;
 	}
 }
 
@@ -271,17 +286,29 @@ static void dm9051_read_mem(const struct device *dev, uint8_t *buf, uint16_t len
 static void dm9051_write_mem(const struct device *dev, const uint8_t *buf, uint16_t len)
 {
 	const struct dm9051_config *config = dev->config;
-	uint8_t cmd = DM9051_MWCMD | OPC_REG_W;
+	/* See dm9051_read_mem(): chunk writes to avoid very long bitbang transfers. */
+	const uint16_t max_chunk = 64;
+	uint16_t remaining = len;
+	uint16_t offset = 0;
 
-	const struct spi_buf tx_buf[2] = {
-		{.buf = &cmd, .len = 1},         /* Command byte */
-		{.buf = (void *)buf, .len = len} /* Data bytes */
-	};
-	const struct spi_buf_set tx = {.buffers = tx_buf, .count = 2};
+	while (remaining > 0) {
+		uint8_t cmd = DM9051_MWCMD | OPC_REG_W;
+		uint16_t chunk = MIN(remaining, max_chunk);
 
-	int ret = spi_write_dt(&config->spi, &tx);
-	if (ret < 0) {
-		LOG_ERR("SPI write memory failed: %d", ret);
+		const struct spi_buf tx_buf[2] = {
+			{.buf = &cmd, .len = 1},                         /* Command byte */
+			{.buf = (void *)(buf + offset), .len = chunk},   /* Data bytes */
+		};
+		const struct spi_buf_set tx = {.buffers = tx_buf, .count = 2};
+
+		int ret = spi_write_dt(&config->spi, &tx);
+		if (ret < 0) {
+			LOG_ERR("SPI write memory failed: %d", ret);
+			return;
+		}
+
+		offset += chunk;
+		remaining -= chunk;
 	}
 }
 
@@ -730,7 +757,9 @@ static uint8_t dm9051_link_status(const struct device *dev)
 			DM9051_DBG("\n(link_status.o=%d)\n", DM9051_ENDC_INC());
 			LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
 			context->link_up = true;
+#if 0
 			net_eth_carrier_on(context->iface);
+#endif
 		}
 	} else {
 		if (context->link_up != false) {
@@ -782,6 +811,11 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 	}
 
 	while (1) {
+		/* Limit how many frames we process per wake-up so we don't
+		 * starve other threads (e.g. shell/console) on busy networks.
+		 */
+		const int rx_burst_max = 8;
+		int rx_burst = 0;
 		int loop_count = 0;
 		if (cint(dev)) {
 			/* Interrupt mode: wait for GPIO interrupt signal */
@@ -812,10 +846,26 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 		/* Process all available packets */
 		while (dm9051_rx_packet(dev) == 0) {
 			loop_count++;
+			if (++rx_burst >= rx_burst_max) {
+				break;
+			}
 		}
 
 		/* Release semaphore */
 		k_sem_give(&context->tx_rx_sem);
+
+		/* If we hit the burst limit, yield so other threads can run. */
+		if (rx_burst >= rx_burst_max) {
+			k_yield();
+		}
+
+		/* Always give lower-priority threads (e.g. UART shell) a chance.
+		 * k_yield() won't help if the shell is lower priority, but sleeping
+		 * will block this thread and allow other work to run.
+		 */
+		if (loop_count > 0) {
+			k_msleep(1);
+		}
 		if (flg_print_rx_status) {
 			flg_print_rx_status = 0;
 			DM9051_DBG("---------%5d DM9051 INT.e sem_count=%u nRX=%d--------\n", 
@@ -1012,7 +1062,7 @@ static void eth_dm9051_iface_init(struct net_if *iface)
 	/* Create RX thread for packet reception */
 	k_thread_create(&context->thread, context->thread_stack,
 			CONFIG_ETH_DM9051_RX_THREAD_STACK_SIZE, dm9051_rx_thread, (void *)dev, NULL,
-			NULL, K_PRIO_COOP(2), /* High priority for network RX */
+			NULL, K_PRIO_PREEMPT(CONFIG_ETH_DM9051_RX_THREAD_PRIO),
 			0, K_NO_WAIT);
 	k_thread_name_set(&context->thread, "dm9051_rx");
 
@@ -1278,8 +1328,9 @@ static int eth_dm9051_init(const struct device *dev)
 #define DM9051_DEFINE(inst)                                                                        \
 	static struct dm9051_runtime dm9051_runtime_##inst = {                                     \
 		.mac_address = DT_INST_PROP(inst, local_mac_address),                              \
-		.tx_rx_sem = Z_SEM_INITIALIZER((dm9051_runtime_##inst).tx_rx_sem, 1, UINT_MAX),    \
-		.int_sem = Z_SEM_INITIALIZER((dm9051_runtime_##inst).int_sem, 0, UINT_MAX),        \
+		/* Binary semaphores: cap count to 1 to avoid backlog/starvation. */                \
+		.tx_rx_sem = Z_SEM_INITIALIZER((dm9051_runtime_##inst).tx_rx_sem, 1, 1),           \
+		.int_sem = Z_SEM_INITIALIZER((dm9051_runtime_##inst).int_sem, 0, 1),               \
 		.link_up = false,                                                                  \
 	};                                                                                         \
                                                                                                    \
