@@ -11,6 +11,8 @@
 LOG_MODULE_REGISTER(net_dhcpv4_client_sample, LOG_LEVEL_DBG);
 
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/linker/sections.h>
 #include <errno.h>
 #include <stdio.h>
@@ -85,6 +87,12 @@ static void option_handler(struct net_dhcpv4_option_callback *cb,
 
 int main(void)
 {
+	static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+
+	if (gpio_is_ready_dt(&led)) {
+		gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
+	}
+
 	LOG_INF("Run dhcpv4 client");
 
 	net_mgmt_init_event_callback(&mgmt_cb, handler,
@@ -98,5 +106,12 @@ int main(void)
 	net_dhcpv4_add_option_callback(&dhcp_cb);
 
 	net_if_foreach(start_dhcpv4_client, NULL);
+
+	while (1) {
+		if (gpio_is_ready_dt(&led)) {
+			gpio_pin_toggle_dt(&led);
+		}
+		k_msleep(1000);
+	}
 	return 0;
 }
