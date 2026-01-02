@@ -753,8 +753,9 @@ static uint8_t dm9051_link_status(const struct device *dev)
 	// if (bmsr & 0x01) --- PHY_STATUS_LINK = 0x0004
 	if (nsr & NSR_LINKST) {
 		if (context->link_up != true) {
-			printk("\n");
-			DM9051_DBG("\n(link_status.o=%d)\n", DM9051_ENDC_INC());
+			//printk("\n");
+			//DM9051_DBG("\n(link_status.o=%d)\n", DM9051_ENDC_INC());
+			printk("_dm9051_link_status: +%s: Link up\n", dev->name);
 			LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
 			context->link_up = true;
 #if 0
@@ -763,10 +764,13 @@ static uint8_t dm9051_link_status(const struct device *dev)
 		}
 	} else {
 		if (context->link_up != false) {
-			DM9051_DBG("\n(link_status.x=%d)\n", DM9051_ENDC_INC());
+			//DM9051_DBG("\n(link_status.x=%d)\n", DM9051_ENDC_INC());
+			printk("%s: Link down\n", dev->name);
 			LOG_INF("%s: Link down", dev->name);
 			context->link_up = false;
+#if 0
 			net_eth_carrier_off(context->iface);
+#endif			
 		}
 	}
 	return nsr;
@@ -810,6 +814,21 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 		return;
 	}
 
+	LOG_INF("%s: DM9051 initialized, RX thread started", dev->name);
+#if 0
+	LOG_INF("%s: DM9051 initialized, DISCARDING RX thread started", dev->name);
+	return;
+#endif
+
+	while (1) {
+			/* Polling mode: periodic check every 10ms */
+			//k_sem_take(&context->int_sem, K_MSEC(config->timeout)); //polling
+			k_msleep(1);\
+			k_yield();
+			/* support update link status */
+			dm9051_link_status(dev);
+	}
+#if 0
 	while (1) {
 		/* Limit how many frames we process per wake-up so we don't
 		 * starve other threads (e.g. shell/console) on busy networks.
@@ -843,6 +862,7 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 		/* Take semaphore to protect SPI access */
 		k_sem_take(&context->tx_rx_sem, K_FOREVER);
 
+#if 0
 		/* Process all available packets */
 		while (dm9051_rx_packet(dev) == 0) {
 			loop_count++;
@@ -850,6 +870,7 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 				break;
 			}
 		}
+#endif
 
 		/* Release semaphore */
 		k_sem_give(&context->tx_rx_sem);
@@ -876,6 +897,7 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 			dm9051_interrupt_reset_for_cb_sem(dev);
 		}
 	}
+#endif
 }
 
 /*******************************************************************************
