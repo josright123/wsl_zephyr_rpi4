@@ -776,6 +776,11 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 	uint32_t int_count = 0;
 	uint8_t flg_print_rx_status = 0;
 
+	if (!context->chip_ok) {
+		LOG_ERR("%s: DM9051 not initialized, RX thread not started", dev->name);
+		return;
+	}
+
 	while (1) {
 		int loop_count = 0;
 		if (cint(dev)) {
@@ -978,6 +983,14 @@ static void eth_dm9051_iface_init(struct net_if *iface)
 	const struct device *dev = net_if_get_device(iface);
 	struct dm9051_runtime *context = dev->data;
 	DM9051_ENDC_SAVE(through_c);
+
+	if (!context->chip_ok) {
+		LOG_ERR("%s: DM9051 init failed, skipping RX thread", dev->name);
+		/* Keep interface present but link down. */
+		context->iface = iface;
+		net_if_carrier_off(iface);
+		return;
+	}
 
 	net_if_set_link_addr(iface, context->mac_address, sizeof(context->mac_address),
 			     NET_LINK_ETHERNET);
@@ -1208,6 +1221,9 @@ static int eth_dm9051_init(const struct device *dev)
 	struct dm9051_runtime *context = dev->data;
 	int ret;
 
+	/* Default to not-ready until full init succeeds. */
+	context->chip_ok = false;
+
 	/* Check SPI is ready */
 	if (!spi_is_ready_dt(&config->spi)) {
 		LOG_ERR("%s: SPI not ready", dev->name);
@@ -1237,8 +1253,11 @@ static int eth_dm9051_init(const struct device *dev)
 	dm9051_hw_reset(dev);
 
 	/* Decide MAC address: DT local-mac-address > NVS > random */
-	if (dm9051_init_mac(dev) != 0)
+	if (dm9051_init_mac(dev) != 0) {
 		return -ENODEV;
+	}
+
+	context->chip_ok = true;
 
 	/* Set MAC address */
 	dm9051_set_mac_address(dev, context->mac_address); // to be checked! more!
