@@ -1148,19 +1148,23 @@ static uint16_t dm9051_detect_id(const struct device *dev)
 		}
 	}
 
-	/* Verify chip ID before reset */
+	/* Verify chip ID before reset. Never block boot forever: retry for a
+	 * bounded amount of time and return failure if the device is not responding.
+	 */
 	if (chip_id != 0x9051 && chip_id != 0x9058) {
-		LOG_ERR("Invalid chip ID: 0x%04x (expected 0x9051 or 0x9058), Re-try", chip_id);
+		LOG_ERR("Invalid chip ID: 0x%04x (expected 0x9051 or 0x9058)", chip_id);
 
-		while (1) {
+		for (int attempt = 0; attempt < CONFIG_ETH_DM9051_ID_VERIFY_RETRY_COUNT; attempt++) {
 			chip_id = dm9051_get_chipid(dev);
 			if (chip_id == 0x9051 || chip_id == 0x9058) {
-				LOG_INF("INFO: DM9051 chip ID verified succeed: 0x%04x", chip_id);
-				break;
+				LOG_INF("DM9051 chip ID verified: 0x%04x", chip_id);
+				return chip_id;
 			}
-			LOG_INF(" INFO: DM9051 chip ID verified failed: 0x%04x", chip_id);
-			k_msleep(1000);
+			k_msleep(CONFIG_ETH_DM9051_ID_VERIFY_RETRY_DELAY_MS);
 		}
+
+		LOG_ERR("DM9051 chip ID verify failed after %d retries",
+			CONFIG_ETH_DM9051_ID_VERIFY_RETRY_COUNT);
 		return 0;
 	}
 

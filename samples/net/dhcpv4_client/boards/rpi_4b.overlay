@@ -21,7 +21,6 @@
 		cs-gpios = <&gpio0 8 GPIO_ACTIVE_LOW>;
 
 		/* Adjust interrupt pin as needed. Example: GPIO 25 */
-		/*
 		dm9051@0 {
 			compatible = "davicom,dm9051";
 			reg = <0>;
@@ -30,6 +29,5 @@
 			int-gpios = <&gpio0 25 GPIO_ACTIVE_LOW>;
 			local-mac-address = [00 00 00 01 02 03];
 		};
-		*/
 	};
 };
