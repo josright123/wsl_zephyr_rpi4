@@ -754,6 +754,11 @@ static uint8_t dm9051_link_status(const struct device *dev)
 		return 0xff;
 	}
 
+	/* Link change notifications require a valid interface. */
+	if (context->iface == NULL) {
+		return nsr;
+	}
+
 	// if (bmsr & 0x01) --- PHY_STATUS_LINK = 0x0004
 	if (nsr & NSR_LINKST) {
 		if (context->link_up != true) {
@@ -762,9 +767,7 @@ static uint8_t dm9051_link_status(const struct device *dev)
 			//LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
 			printk("_dm9051_link_status: +%s: Link up\n", dev->name);
 			context->link_up = true;
-#if 0
 			net_eth_carrier_on(context->iface);
-#endif
 		}
 	} else {
 		if (context->link_up != false) {
@@ -772,9 +775,7 @@ static uint8_t dm9051_link_status(const struct device *dev)
 			//LOG_INF("%s: Link down", dev->name);
 			printk("%s: Link down\n", dev->name);
 			context->link_up = false;
-#if 0
 			net_eth_carrier_off(context->iface);
-#endif			
 		}
 	}
 	return nsr;

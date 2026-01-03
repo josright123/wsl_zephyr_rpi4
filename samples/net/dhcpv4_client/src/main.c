@@ -49,6 +49,11 @@ static void handler(struct net_mgmt_event_callback *cb,
 		return;
 	}
 
+	if (iface == NULL || iface->config.ip.ipv4 == NULL) {
+		LOG_WRN("IPv4 addr add event for iface without IPv4 config");
+		return;
+	}
+
 	for (i = 0; i < NET_IF_MAX_IPV4_ADDR; i++) {
 		char buf[NET_IPV4_ADDR_LEN];
 
