@@ -533,7 +533,9 @@ static int eth_dm9051_tx(const struct device *dev, struct net_pkt *pkt)
 
 	LOG_DBG("%s: TX packet len=%u", dev->name, len);
 
+	#if 0
 	k_sem_take(&context->tx_rx_sem, K_FOREVER);
+	#endif
 
 	/* tx pad default_boundary */
 	//uint16_t pad_len = (MBNDRY_DEFAULT == MBNDRY_WORD) && (len & 1) ? len + 1 : len;
@@ -568,7 +570,9 @@ static int eth_dm9051_tx(const struct device *dev, struct net_pkt *pkt)
 		k_busy_wait(1);
 	}
 
+	#if 0
 	k_sem_give(&context->tx_rx_sem);
+	#endif
 
 	if (timeout == 0) {
 		LOG_ERR("%s: TX timeout", dev->name);
@@ -755,8 +759,8 @@ static uint8_t dm9051_link_status(const struct device *dev)
 		if (context->link_up != true) {
 			//printk("\n");
 			//DM9051_DBG("\n(link_status.o=%d)\n", DM9051_ENDC_INC());
+			//LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
 			printk("_dm9051_link_status: +%s: Link up\n", dev->name);
-			LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
 			context->link_up = true;
 #if 0
 			net_eth_carrier_on(context->iface);
@@ -765,8 +769,8 @@ static uint8_t dm9051_link_status(const struct device *dev)
 	} else {
 		if (context->link_up != false) {
 			//DM9051_DBG("\n(link_status.x=%d)\n", DM9051_ENDC_INC());
+			//LOG_INF("%s: Link down", dev->name);
 			printk("%s: Link down\n", dev->name);
-			LOG_INF("%s: Link down", dev->name);
 			context->link_up = false;
 #if 0
 			net_eth_carrier_off(context->iface);
@@ -819,16 +823,17 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 	LOG_INF("%s: DM9051 initialized, DISCARDING RX thread started", dev->name);
 	return;
 #endif
-
+#if 0
 	while (1) {
 			/* Polling mode: periodic check every 10ms */
 			//k_sem_take(&context->int_sem, K_MSEC(config->timeout)); //polling
-			k_msleep(1);\
+			k_msleep(1);
 			k_yield();
 			/* support update link status */
 			dm9051_link_status(dev);
 	}
-#if 0
+#endif
+#if 1
 	while (1) {
 		/* Limit how many frames we process per wake-up so we don't
 		 * starve other threads (e.g. shell/console) on busy networks.
@@ -854,13 +859,20 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 			dm9051_interrupt_disble_irq(dev);
 		} else {
 			/* Polling mode: periodic check every 10ms */
+	#if 0
 			k_sem_take(&context->int_sem, K_MSEC(config->timeout)); //polling
+	#else
+			k_yield();
+			k_msleep(1);
+	#endif
 			/* support update link status */
 			dm9051_link_status(dev);
 		}
 
 		/* Take semaphore to protect SPI access */
+	#if 0
 		k_sem_take(&context->tx_rx_sem, K_FOREVER);
+	#endif
 
 #if 0
 		/* Process all available packets */
@@ -873,7 +885,9 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 #endif
 
 		/* Release semaphore */
+	#if 0
 		k_sem_give(&context->tx_rx_sem);
+	#endif
 
 		/* If we hit the burst limit, yield so other threads can run. */
 		if (rx_burst >= rx_burst_max) {
