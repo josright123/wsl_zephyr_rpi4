@@ -765,9 +765,10 @@ static uint8_t dm9051_link_status(const struct device *dev)
 			//printk("\n");
 			//DM9051_DBG("\n(link_status.o=%d)\n", DM9051_ENDC_INC());
 			//LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
-			printk("_dm9051_link_status: +%s: Link up\n", dev->name);
+			printk("_dm9051_link_status: +%s: Link up (about to call net_eth_carrier_on)\n", dev->name);
 			context->link_up = true;
 			net_eth_carrier_on(context->iface);
+			printk("_dm9051_link_status: net_eth_carrier_on() returned\n");
 		}
 	} else {
 		if (context->link_up != false) {

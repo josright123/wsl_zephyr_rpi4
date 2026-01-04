@@ -21,6 +21,8 @@ LOG_MODULE_REGISTER(net_dhcpv4_client_sample, LOG_LEVEL_DBG);
 #include <zephyr/net/net_core.h>
 #include <zephyr/net/net_context.h>
 #include <zephyr/net/net_mgmt.h>
+#include <zephyr/net/ethernet.h>
+#include <zephyr/net/ethernet_mgmt.h>
 
 #define DHCP_OPTION_NTP (42)
 
@@ -44,6 +46,16 @@ static void handler(struct net_mgmt_event_callback *cb,
 		    struct net_if *iface)
 {
 	int i = 0;
+
+	if (mgmt_event == NET_EVENT_ETHERNET_CARRIER_ON) {
+		printk("[TRACE] NET_EVENT_ETHERNET_CARRIER_ON received\n");
+		return;
+	}
+
+	if (mgmt_event == NET_EVENT_ETHERNET_CARRIER_OFF) {
+		printk("[TRACE] NET_EVENT_ETHERNET_CARRIER_OFF received\n");
+		return;
+	}
 
 	if (mgmt_event != NET_EVENT_IPV4_ADDR_ADD) {
 		return;
@@ -101,7 +113,9 @@ int main(void)
 	LOG_INF("Run dhcpv4 client");
 
 	net_mgmt_init_event_callback(&mgmt_cb, handler,
-				     NET_EVENT_IPV4_ADDR_ADD);
+				     NET_EVENT_IPV4_ADDR_ADD |
+				     NET_EVENT_ETHERNET_CARRIER_ON |
+				     NET_EVENT_ETHERNET_CARRIER_OFF);
 	net_mgmt_add_event_callback(&mgmt_cb);
 
 	net_dhcpv4_init_option_callback(&dhcp_cb, option_handler,
@@ -112,6 +126,7 @@ int main(void)
 
 	net_if_foreach(start_dhcpv4_client, NULL);
 
+	printk("[TRACE] Entering main LED blink loop\n");
 	while (1) {
 		if (gpio_is_ready_dt(&led)) {
 			gpio_pin_toggle_dt(&led);
