@@ -248,6 +248,8 @@ struct dm9051_runtime {
 	//bool iface_initialized: 1;
 	//bool iface_carrier_on_init: 1;
 	//bool device_ready: 1;
+	bool iface_initialized : 1;
+	bool iface_carrier_on_init : 1;
 };
 
 #define PHY_STATUS_REG (0x01) /*!< basic mode status register */

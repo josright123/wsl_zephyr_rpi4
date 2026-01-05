@@ -786,7 +786,14 @@ static uint8_t dm9051_link_status(const struct device *dev)
 			printk("_dm9051_link_status: +%s: Link up (about to call net_eth_carrier_on)\n", dev->name);
 			context->link_up = true;
 //			net_eth_carrier_on(context->iface);
-			printk("_dm9051_link_status: net_eth_carrier_on() returned\n");
+			if (context->iface_initialized) {
+				printk("_dm9051_link_status: about to call net_eth_carrier_on\n");
+				net_eth_carrier_on(context->iface);
+				printk("_dm9051_link_status: net_eth_carrier_on() returned\n");
+			} else {
+				printk("_dm9051_link_status: iface not initialized, skipping net_eth_carrier_on\n");
+				context->iface_carrier_on_init = true;
+			}
 		}
 	} else {
 		if (context->link_up != false) {
@@ -795,6 +802,11 @@ static uint8_t dm9051_link_status(const struct device *dev)
 			printk("%s: Link down\n", dev->name);
 			context->link_up = false;
 //			net_eth_carrier_off(context->iface);
+			if (context->iface_initialized) {
+				printk("_dm9051_link_status: about to call net_eth_carrier_off\n");
+				net_eth_carrier_off(context->iface);
+				printk("_dm9051_link_status: net_eth_carrier_off() returned\n");
+			}
 		}
 	}
 	return nsr;
@@ -1122,8 +1134,14 @@ static void eth_dm9051_iface_init(struct net_if *iface)
 	ethernet_init(iface);
 
 	/* Set carrier status */
-	if (context->link_up)
-	{
+	//if (context->link_up)
+	//{
+	//	net_if_carrier_on(iface);
+	//} else {
+	//	net_if_carrier_off(iface);
+	//}
+	/* The device may have already interrupted us to flag link UP */
+	if (context->iface_carrier_on_init) {
 		net_if_carrier_on(iface);
 	} else {
 		net_if_carrier_off(iface);
@@ -1138,6 +1156,8 @@ static void eth_dm9051_iface_init(struct net_if *iface)
 
 	DM9051_DBG("(iface_init.e=%d) %s: struct runtime link_up = %s\n", DM9051_ENDC_RETRIVE(through_c), 
 		dev->name, context->link_up ? "true" : "false");
+
+	context->iface_initialized = true;
 }
 
 static const struct ethernet_api api_funcs = {
