@@ -201,13 +201,21 @@ static uint8_t dm9051_read_reg(const struct device *dev, uint8_t reg)
 	const struct dm9051_config *config = dev->config;
 	uint8_t tx_data[2] = {reg | OPC_REG_R, 0x00};
 	uint8_t rx_data[2] = {0};
+	const bool trace = (reg == DM9051_PIDH) || (reg == DM9051_PIDL);
 
 	struct spi_buf tx_buf = {.buf = tx_data, .len = 2};
 	struct spi_buf rx_buf = {.buf = rx_data, .len = 2};
 	const struct spi_buf_set tx = {.buffers = &tx_buf, .count = 1};
 	const struct spi_buf_set rx = {.buffers = &rx_buf, .count = 1};
 
+	if (trace) {
+		printk("[dm9051] spi rd reg 0x%02x ->\n", reg);
+	}
 	int ret = spi_transceive_dt(&config->spi, &tx, &rx);
+	if (trace) {
+		printk("[dm9051] spi rd reg 0x%02x <- ret=%d val=0x%02x\n", reg, ret,
+		       rx_data[1]);
+	}
 	if (ret < 0) {
 		LOG_ERR("SPI read register failed: %d", ret);
 		return 0xFF;
@@ -445,8 +453,10 @@ static uint16_t dm9051_get_chipid(const struct device *dev)
 	uint16_t id;
 	uint8_t pidh, pidl;
 
+	printk("[dm9051] chipid: read PIDH/PIDL ->\n");
 	pidh = dm9051_read_reg(dev, DM9051_PIDH);
 	pidl = dm9051_read_reg(dev, DM9051_PIDL);
+	printk("[dm9051] chipid: PIDH=0x%02x PIDL=0x%02x\n", pidh, pidl);
 	id = (pidh << 8) | pidl;
 
 	/* Print raw register values for debugging */
@@ -1353,6 +1363,13 @@ static int eth_dm9051_init(const struct device *dev)
 		return -ENODEV;
 	}
 
+	/*
+	 * Breadcrumbs: use printk (not LOG_*) so we can see progress even when
+	 * logging is deferred and the system hangs during early SPI transactions.
+	 */
+	printk("[dm9051] init: start\n");
+	printk("[dm9051] init: spi bus ok\n");
+
 	dm9051_init_title_log("(s8.8)");
 
 	/* CS GPIO is automatically configured and controlled by SPI driver layer.
@@ -1373,24 +1390,36 @@ static int eth_dm9051_init(const struct device *dev)
 	dm9051_init_debug_log(dev); /* Print detailed GPIO information */
 
 	/* Perform hardware reset */
+	printk("[dm9051] init: hw_reset ->\n");
 	dm9051_hw_reset(dev);
+	printk("[dm9051] init: hw_reset <-\n");
 
 	/* Decide MAC address: DT local-mac-address > NVS > random */
+	printk("[dm9051] init: init_mac (chip id + core reset) ->\n");
 	if (dm9051_init_mac(dev) != 0) {
+		printk("[dm9051] init: init_mac FAILED\n");
 		return -ENODEV;
 	}
+	printk("[dm9051] init: init_mac <-\n");
 
 	context->chip_ok = true;
 
 	/* Set MAC address */
+	printk("[dm9051] init: set_mac_address ->\n");
 	dm9051_set_mac_address(dev, context->mac_address); // to be checked! more!
+	printk("[dm9051] init: set_mac_address <-\n");
 
 #if 1
 	/* Configure multicast addresses */
+	printk("[dm9051] init: set_multicast ->\n");
 	dm9051_set_multicast(dev);
+	printk("[dm9051] init: set_multicast <-\n");
 #endif
 	/* Configure receive */
+	printk("[dm9051] init: set_receive ->\n");
 	dm9051_set_receive(dev);
+	printk("[dm9051] init: set_receive <-\n");
+	printk("[dm9051] init: done\n");
 	return 0;
 }
 
