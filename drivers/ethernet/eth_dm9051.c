@@ -1154,6 +1154,34 @@ static void eth_dm9051_iface_init(struct net_if *iface)
 			0, K_NO_WAIT);
 	k_thread_name_set(&context->thread, "dm9051_rx");
 
+	if (1) {
+		//const struct device *dev = net_if_get_device(iface);
+		const char *ifname = dev ? dev->name : "?";
+		int ifindex = net_if_get_by_iface(iface);
+		if (1) {
+		#if 1
+			char lladdr_buf[3 * 16];
+			const struct net_linkaddr *lladdr = net_if_get_link_addr(iface);
+			int llpos = 0;
+
+			lladdr_buf[0] = '\0';
+			if (lladdr /* && lladdr->addr*/ && lladdr->len > 0) {
+				for (size_t j = 0; j < lladdr->len && j < 16; j++) {
+					llpos += snprintk(lladdr_buf + llpos,
+							sizeof(lladdr_buf) - llpos,
+							"%s%02x",
+							(j == 0) ? "" : ":",
+							lladdr->addr[j]);
+					if (llpos >= sizeof(lladdr_buf)) {
+						break;
+					}
+				}
+			}
+			LOG_INF(" iface_init: %s (index=%d) mac=%s",
+				ifname, ifindex, lladdr_buf);
+		#endif
+		}
+	}
 	DM9051_DBG("(iface_init.e=%d) %s: struct runtime link_up = %s\n", DM9051_ENDC_RETRIVE(through_c), 
 		dev->name, context->link_up ? "true" : "false");
 
