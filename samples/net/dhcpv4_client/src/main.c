@@ -112,11 +112,13 @@ int main(void)
 
 	LOG_INF("Run dhcpv4 client");
 
+#if 1
 	net_mgmt_init_event_callback(&mgmt_cb, handler,
 				     NET_EVENT_IPV4_ADDR_ADD |
 				     NET_EVENT_ETHERNET_CARRIER_ON |
 				     NET_EVENT_ETHERNET_CARRIER_OFF);
 	net_mgmt_add_event_callback(&mgmt_cb);
+#endif
 
 	net_dhcpv4_init_option_callback(&dhcp_cb, option_handler,
 					DHCP_OPTION_NTP, ntp_server,
