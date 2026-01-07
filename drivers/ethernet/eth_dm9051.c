@@ -780,10 +780,11 @@ static uint8_t dm9051_link_status(const struct device *dev)
 	// if (bmsr & 0x01) --- PHY_STATUS_LINK = 0x0004
 	if (nsr & NSR_LINKST) {
 		if (context->link_up != true) {
-			//printk("\n");
+			printk("\n");
+			LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
 			//DM9051_DBG("\n(link_status.o=%d)\n", DM9051_ENDC_INC());
 			//LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
-			printk("_dm9051_link_status: +%s: Link up (about to call net_eth_carrier_on)\n", dev->name);
+			//printk("_dm9051_link_status: +%s: Link up (about to call net_eth_carrier_on)\n", dev->name);
 			context->link_up = true;
 //			net_eth_carrier_on(context->iface);
 			if (context->iface_initialized) {
@@ -798,8 +799,8 @@ static uint8_t dm9051_link_status(const struct device *dev)
 	} else {
 		if (context->link_up != false) {
 			//DM9051_DBG("\n(link_status.x=%d)\n", DM9051_ENDC_INC());
-			//LOG_INF("%s: Link down", dev->name);
-			printk("%s: Link down\n", dev->name);
+			LOG_INF("%s: Link down", dev->name);
+			//printk("%s: Link down\n", dev->name);
 			context->link_up = false;
 //			net_eth_carrier_off(context->iface);
 			if (context->iface_initialized) {

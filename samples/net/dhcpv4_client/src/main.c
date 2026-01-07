@@ -46,48 +46,74 @@ static void handler(struct net_mgmt_event_callback *cb,
 		    struct net_if *iface)
 {
 	int i = 0;
+	const struct device *dev = net_if_get_device(iface);
+	const char *ifname = dev ? dev->name : "?";
+	int ifindex = net_if_get_by_iface(iface);
+	char lladdr_buf[3 * 16];
+	const struct net_linkaddr *lladdr = net_if_get_link_addr(iface);
+	int llpos = 0;
+
+	lladdr_buf[0] = '\0';
+	if (lladdr && lladdr->addr && lladdr->len > 0) {
+		for (size_t j = 0; j < lladdr->len && j < 16; j++) {
+			llpos += snprintk(lladdr_buf + llpos,
+					 sizeof(lladdr_buf) - llpos,
+					 "%s%02x",
+					 (j == 0) ? "" : ":",
+					 lladdr->addr[j]);
+			if (llpos >= sizeof(lladdr_buf)) {
+				break;
+			}
+		}
+	}
 
 	if (mgmt_event == NET_EVENT_ETHERNET_CARRIER_ON) {
-		printk("[TRACE] NET_EVENT_ETHERNET_CARRIER_ON received\n");
+		printk("[TRACE] *** CARRIER ON *** on %s (index=%d) ll=%s\n",
+		       ifname, ifindex, lladdr_buf);
 		return;
 	}
 
 	if (mgmt_event == NET_EVENT_ETHERNET_CARRIER_OFF) {
-		printk("[TRACE] NET_EVENT_ETHERNET_CARRIER_OFF received\n");
+		printk("[TRACE] *** CARRIER ON *** on %s (index=%d) ll=%s\n",
+		       ifname, ifindex, lladdr_buf);
 		return;
 	}
 
-	if (mgmt_event != NET_EVENT_IPV4_ADDR_ADD) {
-		return;
-	}
+	//if (mgmt_event != NET_EVENT_IPV4_ADDR_ADD) {
+	//	return;
+	//}
 
-	if (iface == NULL || iface->config.ip.ipv4 == NULL) {
-		LOG_WRN("IPv4 addr add event for iface without IPv4 config");
-		return;
-	}
+	if (mgmt_event == NET_EVENT_IPV4_DHCP_BOUND) {
 
-	for (i = 0; i < NET_IF_MAX_IPV4_ADDR; i++) {
-		char buf[NET_IPV4_ADDR_LEN];
-
-		if (iface->config.ip.ipv4->unicast[i].ipv4.addr_type !=
-							NET_ADDR_DHCP) {
-			continue;
+		if (iface == NULL || iface->config.ip.ipv4 == NULL) {
+			LOG_WRN("IPv4 addr add event for iface without IPv4 config");
+			return;
 		}
 
-		LOG_INF("   Address[%d]: %s", net_if_get_by_iface(iface),
-			net_addr_ntop(NET_AF_INET,
-			    &iface->config.ip.ipv4->unicast[i].ipv4.address.in_addr,
-						  buf, sizeof(buf)));
-		LOG_INF("    Subnet[%d]: %s", net_if_get_by_iface(iface),
-			net_addr_ntop(NET_AF_INET,
-				       &iface->config.ip.ipv4->unicast[i].netmask,
-				       buf, sizeof(buf)));
-		LOG_INF("    Router[%d]: %s", net_if_get_by_iface(iface),
-			net_addr_ntop(NET_AF_INET,
-						 &iface->config.ip.ipv4->gw,
-						 buf, sizeof(buf)));
-		LOG_INF("Lease time[%d]: %u seconds", net_if_get_by_iface(iface),
-			iface->config.dhcpv4.lease_time);
+		for (i = 0; i < NET_IF_MAX_IPV4_ADDR; i++) {
+			char buf[NET_IPV4_ADDR_LEN];
+
+			if (iface->config.ip.ipv4->unicast[i].ipv4.addr_type !=
+								NET_ADDR_DHCP) {
+				continue;
+			}
+
+			LOG_INF("   Address[%d]: %s", net_if_get_by_iface(iface),
+				net_addr_ntop(NET_AF_INET,
+					&iface->config.ip.ipv4->unicast[i].ipv4.address.in_addr,
+							buf, sizeof(buf)));
+			LOG_INF("    Subnet[%d]: %s", net_if_get_by_iface(iface),
+				net_addr_ntop(NET_AF_INET,
+						&iface->config.ip.ipv4->unicast[i].netmask,
+						buf, sizeof(buf)));
+			LOG_INF("    Router[%d]: %s", net_if_get_by_iface(iface),
+				net_addr_ntop(NET_AF_INET,
+							&iface->config.ip.ipv4->gw,
+							buf, sizeof(buf)));
+			LOG_INF("Lease time[%d]: %u seconds", net_if_get_by_iface(iface),
+				iface->config.dhcpv4.lease_time);
+		}
+		return;
 	}
 }
 
@@ -114,7 +140,8 @@ int main(void)
 
 #if 1
 	net_mgmt_init_event_callback(&mgmt_cb, handler,
-				     NET_EVENT_IPV4_ADDR_ADD |
+				     /*NET_EVENT_IPV4_ADDR_ADD | */
+					 NET_EVENT_IPV4_DHCP_BOUND |
 				     NET_EVENT_ETHERNET_CARRIER_ON |
 				     NET_EVENT_ETHERNET_CARRIER_OFF);
 	net_mgmt_add_event_callback(&mgmt_cb);
