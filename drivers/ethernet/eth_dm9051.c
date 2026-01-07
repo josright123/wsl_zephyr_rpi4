@@ -742,16 +742,8 @@ static uint8_t dm9051_link_status(const struct device *dev)
 	// uint16_t bmsr;
 	uint8_t nsr;
 	struct dm9051_runtime *context = dev->data;
-	static uint32_t link_check_count = 0;
-	link_check_count++;
-	if ((link_check_count % 1000) == 0) {
-		printk("[LINK_STATUS] Called (count %u)\n", link_check_count);
-	}
 
 	// bmsr = dm9051_phy_read(dev, PHY_STATUS_REG);
-	if ((link_check_count % 1000) == 0) {
-		printk("[LINK_STATUS] About to read NSR register\n");
-	}
 	nsr = dm9051_read_reg(dev, DM9051_NSR);
 	// if (bmsr == 0xffff) {
 	//	LOG_ERR("%s: PHY read failed", dev->name);
@@ -775,7 +767,7 @@ static uint8_t dm9051_link_status(const struct device *dev)
 			//LOG_INF("_dm9051_link_status: +%s: Link up", dev->name);
 			printk("_dm9051_link_status: +%s: Link up (about to call net_eth_carrier_on)\n", dev->name);
 			context->link_up = true;
-//			net_eth_carrier_on(context->iface);
+			net_eth_carrier_on(context->iface);
 			printk("_dm9051_link_status: net_eth_carrier_on() returned\n");
 		}
 	} else {
@@ -784,7 +776,7 @@ static uint8_t dm9051_link_status(const struct device *dev)
 			//LOG_INF("%s: Link down", dev->name);
 			printk("%s: Link down\n", dev->name);
 			context->link_up = false;
-//			net_eth_carrier_off(context->iface);
+			net_eth_carrier_off(context->iface);
 		}
 	}
 	return nsr;
@@ -851,11 +843,6 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 		const int rx_burst_max = 8;
 		int rx_burst = 0;
 		int loop_count = 0;
-		static uint32_t loop_iter = 0;
-		loop_iter++;
-		if ((loop_iter % 1000) == 0) {
-			printk("[RX_THREAD] Loop iteration %u\n", loop_iter);
-		}
 		if (cint(dev)) {
 			/* Interrupt mode: wait for GPIO interrupt signal */
 			int res = k_sem_take(&context->int_sem, K_MSEC(100));
@@ -877,19 +864,10 @@ static void dm9051_rx_thread(void *arg1, void *arg2, void *arg3)
 	#if 0
 			k_sem_take(&context->int_sem, K_MSEC(config->timeout)); //polling
 	#else
-			if ((loop_iter % 1000) == 0) {
-				printk("[RX_THREAD] About to k_yield (loop %u)\n", loop_iter);
-			}
 			k_yield();
-			if ((loop_iter % 1000) == 0) {
-				printk("[RX_THREAD] About to k_msleep (loop %u)\n", loop_iter);
-			}
 			k_msleep(1);
 	#endif
 			/* support update link status */
-			if ((loop_iter % 1000) == 0) {
-				printk("[RX_THREAD] About to call dm9051_link_status (loop %u)\n", loop_iter);
-			}
 			dm9051_link_status(dev);
 		}
 
@@ -1145,20 +1123,12 @@ void dm9051_init_title_log(char *head)
 
 void dm9051_init_debug_log(const struct device *dev)
 {
-	const struct dm9051_config *config = dev->config;
-
 	DM9051_DBG("(dm9051_init_debug_log) ========================================\n");
 	DM9051_DBG("(dm9051_init_debug_log) dev->name = %s\n", dev->name);
-
-	if (config == NULL || config->spi.bus == NULL) {
-		DM9051_DBG("(dm9051_init_debug_log) SPI bus: (null)\n");
-		DM9051_DBG("(dm9051_init_debug_log) ========================================\n");
-		return;
-	}
-
-	DM9051_DBG("(dm9051_init_debug_log) dev->config->spi.bus->name: %s\n", config->spi.bus->name);
+	DM9051_DBG("(dm9051_init_debug_log) dev->config->spi.bus->name: %s\n",
+	       ((struct dm9051_config *)dev->config)->spi.bus->name);
 	DM9051_DBG("(dm9051_init_debug_log) dev->config->spi.config.frequency: %u MHz\n",
-	       config->spi.config.frequency / 1000000);
+	       ((struct dm9051_config *)dev->config)->spi.config.frequency / 1000000);
 	DM9051_DBG("(dm9051_init_debug_log) ========================================\n");
 }
 
@@ -1343,11 +1313,6 @@ static int eth_dm9051_init(const struct device *dev)
 	context->chip_ok = false;
 
 	/* Check SPI is ready */
-	if (config == NULL || config->spi.bus == NULL) {
-		LOG_ERR("%s: SPI bus not set (check devicetree spi + dm9051 node)", dev->name);
-		return -ENODEV;
-	}
-
 	if (!spi_is_ready_dt(&config->spi)) {
 		LOG_ERR("%s: SPI not ready", dev->name);
 		return -ENODEV;
