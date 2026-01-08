@@ -8,6 +8,10 @@
 	status = "okay";
 };
 
+&sram0 {
+	reg = <0x200000 0x100000>; /* Expand to 1MB to accommodate AArch64 network stacks */
+};
+
 / {
 	spi_bitbang: spi-bitbang {
 		compatible = "zephyr,spi-bitbang";
