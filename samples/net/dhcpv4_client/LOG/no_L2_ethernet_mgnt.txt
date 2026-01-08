@@ -1,0 +1,62 @@
+Read start4.elf bytes  2303232 hnd 0x10
+Read fixup4.dat bytes     5498 hnd 0xf
+Firmware: 2226a853bb9f5fd80392e3a4a89e457aeca88008 Dec  8 2025 19:39:51
+0x00c03111 0x00000000 0x00003fff
+MEM GPU: 76 ARM: 947 TOTAL: 1023
+Starting start4.elf @ 0xfeb00200 partition 0
++
+
+MESS:00:00:06.894977:0: USB boot mode 2
+MESS:00:00:06.901698:0: brfs: File read: /mfs/sd/config.txt
+MESS:00:00:06.904309:0: board: boardrev c03111 otp c03111
+MESS:00:00:06.909360:0: brfs: File read: 60 bytes
+MESS:00:00:06.994238:0: HDMI1:EDID error reading EDID block 0 attempt 0
+MESS:00:00:06.998738:0: HDMI1:EDID giving up on reading EDID block 0
+MESS:00:00:07.004114:0: brfs: File read: /mfs/sd/config.txt
+MESS:00:00:07.457877:0: gpioman: gpioman_get_pin_num: pin DISPLAY_DSI_PORT not defined
+MESS:00:00:07.463425:0: gpioman: gpioman_get_pin_num: pin DISPLAY_DSI_PORT not defined
+MESS:00:00:07.472460:0: *** Restart logging
+MESS:00:00:07.474235:0: brfs: File read: 60 bytes
+MESS:00:00:07.542402:0: hdmi: HDMI1:EDID error reading EDID block 0 attempt 0
+MESS:00:00:07.547429:0: hdmi: HDMI1:EDID giving up on reading EDID block 0
+MESS:00:00:07.564453:0: hdmi: HDMI1:EDID error reading EDID block 0 attempt 0
+MESS:00:00:07.569534:0: hdmi: HDMI1:EDID giving up on reading EDID block 0
+MESS:00:00:07.575131:0: hdmi: HDMI:hdmi_get_state is deprecated, use hdmi_get_display_state instead
+MESS:00:00:07.583891:0: HDMI0: hdmi_pixel_encoding: 300000000
+MESS:00:00:07.589393:0: HDMI1: hdmi_pixel_encoding: 300000000
+MESS:00:00:07.605763:0: dtb_file 'bcm2711-rpi-4-b.dtb'
+MESS:00:00:07.615350:0: brfs: File read: /mfs/sd/bcm2711-rpi-4-b.dtb
+MESS:00:00:07.618644:0: Loaded 'bcm2711-rpi-4-b.dtb' to 0x100 size 0xdbb9
+MESS:00:00:07.659123:0: brfs: File read: 56249 bytes
+MESS:00:00:07.731489:0: brfs: File read: /mfs/sd/config.txt
+MESS:00:00:07.767280:0: brfs: File read: 60 bytes
+MESS:00:00:07.769073:0: Failed to open command line file 'cmdline.txt'
+MESS:00:00:07.937361:0: brfs: File read: /mfs/sd/zephyr.bin
+MESS:00:00:07.939829:0: Loaded 'zephyr.bin' to 0x200000 size 0x3e0a0
+MESS:00:00:07.945922:0: Device tree loaded to 0x2eff1f00 (size 0xe0fa)
+MESS:00:00:07.954022:0: uart: Set PL011 baud rate to 103448.300000 Hz
+MESS:00:00:07.961221:0: uart: Baud rate change done...
+MESS:00:00:07.963244:0:
+
+[00:00:00.000,000] <inf> eth_dm9051: _eth_dm9051_init: +eth_dm9051_init (s8.8)
+[00:00:00.000,000] <inf> eth_dm9051: _eth_dm9051_init: Skipping reset GPIO (not defined)
+[00:00:00.000,000] <inf> eth_dm9051: _eth_dm9051_init: POLLING mode (no int-gpios defined)
+(dm9051_init_debug_log) ========================================
+(dm9051_init_debug_log) dev->name = dm9051@0
+(dm9051_init_debug_log) dev->config->spi.bus->name: spi-bitbang
+(dm9051_init_debug_log) dev->config->spi.config.frequency: 8 MHz
+(dm9051_init_debug_log) ========================================
+(start.s=0) MBNDRY_DEFAULT MBNDRY_WORD
+
+[00:00:00.080,000] <inf> eth_dm9051: _dm9051_mac: +ChipID 9051, Using CHIP MAC addr 00606ee27a3c
+[00:00:00.080,000] <dbg> net_mgmt: net_mgmt_event_init: (main): Net MGMT initialized: queue of 5 entries, stack size of 800
+(iface_init.e=1) dm9051@0: struct runtime link_up = false
+*** Booting Zephyr OS build 2026_01_02_fail_point-2-g2c0d354f8e8f ***
+[00:00:00.080,000] <inf> net_dhcpv4_client_sample: Run dhcpv4 client
+[00:00:00.080,000] <dbg> net_mgmt: net_mgmt_add_event_callback: (main): Adding event callback 0x24a188
+[00:00:00.080,000] <inf> net_dhcpv4_client_sample: Start on dm9051@0: index=1
+[00:00:00.080,000] <dbg> net_mgmt: net_mgmt_add_event_callback: (main): Adding event callback 0x24bb28
+[TRACE] Entering main LED blink loop
+[00:00:00.080,000] <inf> eth_dm9051: dm9051@0: DM9051 initialized, RX thread started
+uart:~$
+uart:~$
