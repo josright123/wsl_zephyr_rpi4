@@ -28,6 +28,33 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #include "eth_dm9051_priv.h"
 
+#define ETH_DM9051_RX_THREAD_STACK_SIZE 1536 //800 (for smaller system resource device)
+
+struct dm9051_config {
+	struct spi_dt_spec spi;
+	struct gpio_dt_spec interrupt;
+	struct gpio_dt_spec reset;
+
+	int32_t timeout_pkt;
+	int32_t timeout;
+};
+
+struct dm9051_runtime {
+	struct net_if *iface;
+	struct k_sem tx_rx_sem;
+	struct k_sem int_sem;
+
+	K_KERNEL_STACK_MEMBER(thread_stack, ETH_DM9051_RX_THREAD_STACK_SIZE);
+	struct k_thread thread;
+
+	struct gpio_callback gpio_cb;
+
+	uint8_t mac_address[6];
+
+	bool chip_ok: 1;
+	bool link_up: 1;
+};
+
 static uint8_t dm9051_read_reg(const struct device *dev, uint8_t reg);
 static void dm9051_read_mem(const struct device *dev, uint8_t *buf, uint16_t len);
 
@@ -1058,8 +1085,8 @@ static void eth_dm9051_iface_init(struct net_if *iface)
 
 	/* Create RX thread for packet reception */
 	k_thread_create(&context->thread, context->thread_stack,
-			CONFIG_ETH_DM9051_RX_THREAD_STACK_SIZE, dm9051_rx_thread, (void *)dev, NULL,
-			NULL, K_PRIO_PREEMPT(CONFIG_ETH_DM9051_RX_THREAD_PRIO),
+			K_KERNEL_STACK_SIZEOF(context->thread_stack), dm9051_rx_thread, (void *)dev, NULL,
+			NULL, K_PRIO_PREEMPT(CONFIG_ETH_DM9051_RX_THREAD_PRIO), /* Higher priority for network RX */
 			0, K_NO_WAIT);
 	k_thread_name_set(&context->thread, "dm9051_rx");
 
